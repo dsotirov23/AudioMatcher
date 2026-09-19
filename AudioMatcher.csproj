@@ -13,4 +13,8 @@
     <Folder Include="Transform\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="3.1.0" />
+  </ItemGroup>
+
 </Project>
