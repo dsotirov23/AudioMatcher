@@ -7,4 +7,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Hashing\" />
+    <Folder Include="Database\" />
+    <Folder Include="Transform\" />
+  </ItemGroup>
+
 </Project>
