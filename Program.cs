@@ -1,4 +1,5 @@
 ﻿using AudioMatcher.Media;
+using AudioMatcher.Transform;
 
 namespace AudioMatcher
 {
@@ -17,9 +18,19 @@ namespace AudioMatcher
             if (ext_data != null)
             {
                 // Some properties for info
-                Console.WriteLine("Successfully extracted data.");
+                Console.WriteLine("Data extraction phase:");
                 Console.WriteLine($"Sample Rate: {ext_data.SampleRate}");
                 Console.WriteLine($"Samples extracted: {ext_data.Samples.Length}");
+
+                // check if chunking logic works:
+                Console.WriteLine("\n Chunking logic:");
+                var analyzer = new AudioAnalyzer();
+                var frames = analyzer.CreateFrames(ext_data.Samples);
+
+                Console.WriteLine($"Split audio into {frames.Count} individual frames.");
+                // added just to check example file
+                Console.WriteLine("\nFor reference number of chunks should be sample size lenght/4096 or in this case 890182/4096=" + 890182 / 4096);
+                Console.WriteLine($"Each frame contains {frames[0].Length} samples.");
             }
             else
             {
