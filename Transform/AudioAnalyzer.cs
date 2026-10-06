@@ -109,6 +109,58 @@ namespace AudioMatcher.Transform
             return freq_loud_score;
         }
 
-       
+        public List<Peak> GetFrequencyPeaks(List<double[]> spectrogram)
+        {
+            // List that will hold the target points - the loudest frequencies from each freame,
+            List<Peak> frequency_peaks = new List<Peak>();
+
+            // A noise threshold that filters out quiet/ambient sounds, can be adjusted
+            double noise_threshold = 10.0;
+
+            // Split the freq. bins into logarithmic sub-ranges to capture all necessary points in a frame
+            // and not just a loud bass note or peak that overpowers the rest of the audio there.
+            int[] freq_bands = { 0, 10, 20, 40, 80, 160, 512, 2048 };
+
+            // Loop through each frame (time slice) of the audio file
+            for (int i = 0; i < spectrogram.Count; i++)
+            {
+                // Get the array of 2048 freq. volume score for the exact (current) frame
+                double[] current_frame = spectrogram[i];
+
+                // Start looping through the defined freq. bands (0-10, 10-20, 20-40...)
+                for (int j = 0; j < freq_bands.Length - 1; j++)
+                {
+                    // Bounds for each current band
+                    int lower_bound = freq_bands[j];
+                    int upper_bound = freq_bands[j + 1];
+
+                    // Variables to hold the loudest volume and the spicific pitch (bin index) it is in
+                    double max_amplitude = 0;
+                    int best_bin = -1;
+
+                    // Go through every individual freq. bin within this lower/upper bands
+                    for (int bin = 0; bin < upper_bound; bin++)
+                    {
+                        // Check if current bin is lowder than the loudest we have now
+                        if (current_frame[bin] > max_amplitude)
+                        {
+                            // If yes, update variables
+                            max_amplitude = current_frame[bin];
+                            best_bin = bin;
+                        }
+                    }
+
+                    // After going through the band, make a simple check ot see if loudest note is actually 
+                    // louder than the threshold
+                    if (max_amplitude > noise_threshold && best_bin != -1)
+                    {
+                        // Save the coordinates into the map for peaks.
+                        frequency_peaks.Add(new Peak(i, best_bin, max_amplitude));
+                    }
+                }
+            }
+
+            return frequency_peaks;
+        }
     }
 }
