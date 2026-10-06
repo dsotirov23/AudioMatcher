@@ -36,27 +36,32 @@ namespace AudioMatcher
 
                 Console.WriteLine("\n DFT test:");
 
+                // Stopwatch to see time bottleneck.
                 Stopwatch stopwatch = new Stopwatch();
+                stopwatch.Start();
 
-                // Quickly check time bottleneck in DFT
-                int[] batch_sizes = { 1, 10, 50, Math.Min(100, frames.Count) };
+                // List to hold spectogram data
+                List<double[]> full_spectrogram = new List<double[]>();
 
-                foreach (int batch in batch_sizes)
+                // Loops through frames to apply DFT
+                for (int i = 0; i < frames.Count; i++)
                 {
-                    stopwatch.Restart();
-
-                    for (int i = 0; i < batch; i++)
-                    {
-                        double[] results = analyzer.ProcessFramesDFT(frames[i]);
-                    }
-
-                    stopwatch.Stop();
-
-                    double audio_durations_ms = (batch * 4096.0 / ext_data.SampleRate) * 1000;
-
-                    Console.WriteLine($"Processed {batch} frames ({audio_durations_ms:F0} ms of audio)");
-                    Console.WriteLine($"Execution Time: {stopwatch.ElapsedMilliseconds} ms");
+                    double[] frame_results = analyzer.ProcessFramesDFT(frames[i]);
+                    full_spectrogram.Add(frame_results);
                 }
+
+                stopwatch.Stop();
+                Console.WriteLine($"Processed {frames.Count} frames.");
+                Console.WriteLine($"Total calculation time: {stopwatch.ElapsedMilliseconds} ms");
+
+                using (StreamWriter writer = new StreamWriter("spectogram_data.csv"))
+                {
+                    foreach (double[] frame in full_spectrogram)
+                    {
+                        writer.WriteLine(string.Join(",", frame));
+                    }
+                }
+                Console.WriteLine("\n Saved to spectogram_data.csv.");
             }
             else
             {
