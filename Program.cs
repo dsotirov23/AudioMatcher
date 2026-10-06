@@ -34,34 +34,26 @@ namespace AudioMatcher
                 Console.WriteLine("\nFor reference number of chunks should be sample size lenght/4096 or in this case 890182/4096=" + 890182 / 4096);
                 Console.WriteLine($"Each frame contains {frames[0].Length} samples.");
 
-                Console.WriteLine("\n DFT test:");
-
-                // Stopwatch to see time bottleneck.
-                Stopwatch stopwatch = new Stopwatch();
-                stopwatch.Start();
-
                 // List to hold spectogram data
                 List<double[]> full_spectrogram = new List<double[]>();
 
-                // Loops through frames to apply DFT
+                // Loops through frames to apply FFT
                 for (int i = 0; i < frames.Count; i++)
                 {
                     double[] frame_results = analyzer.ProcessFramesFFT(frames[i]);
                     full_spectrogram.Add(frame_results);
                 }
 
-                stopwatch.Stop();
-                Console.WriteLine($"Processed {frames.Count} frames.");
-                Console.WriteLine($"Total calculation time: {stopwatch.ElapsedMilliseconds} ms");
+                Console.WriteLine("\n Extracting Frequency Peaks");
+                List<Peak> peak_map = analyzer.GetFrequencyPeaks(full_spectrogram);
+                Console.WriteLine($"Total peaks: {peak_map.Count}");
 
-                using (StreamWriter writer = new StreamWriter("spectogram_data.csv"))
+                Console.WriteLine("\nSample of first 25 peaks:");
+                for (int i = 0; i < Math.Min(25, peak_map.Count); i++)
                 {
-                    foreach (double[] frame in full_spectrogram)
-                    {
-                        writer.WriteLine(string.Join(",", frame));
-                    }
+                    Peak p = peak_map[i];
+                    Console.WriteLine($"Frame: {p.TimeFrameIndex:D3}; Bin {p.FrequencyBin,4}; Loudness: {p.Amplitude:F2}");
                 }
-                Console.WriteLine("\n Saved to spectogram_data.csv.");
             }
             else
             {

@@ -139,7 +139,7 @@ namespace AudioMatcher.Transform
                     int best_bin = -1;
 
                     // Go through every individual freq. bin within this lower/upper bands
-                    for (int bin = 0; bin < upper_bound; bin++)
+                    for (int bin = lower_bound; bin < upper_bound; bin++)
                     {
                         // Check if current bin is lowder than the loudest we have now
                         if (current_frame[bin] > max_amplitude)
