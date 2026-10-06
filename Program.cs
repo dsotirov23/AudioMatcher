@@ -1,4 +1,6 @@
-﻿using AudioMatcher.Media;
+﻿using System;
+using System.Diagnostics;
+using AudioMatcher.Media;
 using AudioMatcher.Transform;
 
 namespace AudioMatcher
@@ -31,6 +33,30 @@ namespace AudioMatcher
                 // added just to check example file
                 Console.WriteLine("\nFor reference number of chunks should be sample size lenght/4096 or in this case 890182/4096=" + 890182 / 4096);
                 Console.WriteLine($"Each frame contains {frames[0].Length} samples.");
+
+                Console.WriteLine("\n DFT test:");
+
+                Stopwatch stopwatch = new Stopwatch();
+
+                // Quickly check time bottleneck in DFT
+                int[] batch_sizes = { 1, 10, 50, Math.Min(100, frames.Count) };
+
+                foreach (int batch in batch_sizes)
+                {
+                    stopwatch.Restart();
+
+                    for (int i = 0; i < batch; i++)
+                    {
+                        double[] results = analyzer.ProcessFramesDFT(frames[i]);
+                    }
+
+                    stopwatch.Stop();
+
+                    double audio_durations_ms = (batch * 4096.0 / ext_data.SampleRate) * 1000;
+
+                    Console.WriteLine($"Processed {batch} frames ({audio_durations_ms:F0} ms of audio)");
+                    Console.WriteLine($"Execution Time: {stopwatch.ElapsedMilliseconds} ms");
+                }
             }
             else
             {
