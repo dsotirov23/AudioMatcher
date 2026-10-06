@@ -34,43 +34,78 @@ namespace AudioMatcher.Transform
             return frames;
         }
 
-        // A Discrete Fourier Transform implemenatation, which is esentially the algorigthm that stays 
-        // below the FFT. Implementing it for the sake of understanding how it'd work, it's not optimal,
-        // because its complexity is O(N^2), while an FFT implementation should be O(N log N)
-        public double[] ProcessFramesDFT(float[] frame)
+        // The core FFT algorithm, more specifically the Cooley-Tukey method, which reduces the
+        // time complexity from O(N^2) to O(NlogN) by dviding the array in half continously.
+        private Complex[] PerformFFT(Complex[] data)
         {
+            int n = data.Length;
 
-            // So there's a rule "Nyquist limit", which essentially means that we only analyze the first
-            // half because the second half of a Fourier Transform is just an image mirror of the first.
+            // Base case: stops when array is broken into 1 single element
+            if (n <= 1)
+            {
+                return data;
+            }
+
+            // Split array into two smaller arrays - 1 for even indexes of items and 1 for odd.
+            Complex[] even = new Complex[n / 2];
+            Complex[] odd = new Complex[n / 2];
+
+            for (int i = 0; i < n / 2; i++)
+            {
+                even[i] = data[i * 2]; // for ex. index 0, 2, 4, 6...
+                odd[i] = data[i * 2 + 1]; // for ex. index 1, 3, 5, 7...
+            }
+
+            // Call function recursively to halve array each time.
+            Complex[] even_result = PerformFFT(even);
+            Complex[] odd_result = PerformFFT(odd);
+
+            // Then combine the processed halves back together 
+            Complex[] result = new Complex[n];
+            for (int k = 0; k < n / 2; k++)
+            {
+                // The 'twiddle' thing is basically the calculation of the rotation angle for a specific freq. bin
+                double angle = -2.0 * Math.PI * k / n;
+                Complex twiddle = new Complex(Math.Cos(angle), Math.Sin(angle));
+
+                // The odd result is multiplied with the twiddle factor using the overloaded '*' operator.
+                Complex t = twiddle * odd_result[k];
+
+                // Both the lower and the upper half of the combined array get combined together, making it symmetrical.
+                result[k] = even_result[k] + t;
+                result[k + n / 2] = even_result[k] - t;
+            }
+            return result;
+        }
+
+        // The method that uses the FFT to process frames
+        public double[] ProcessFramesFFT(float[] frame)
+        {
             int total_samples = frame.Length;
-            int half_size = total_samples / 2;
 
-            // In this double array, the 'loudnes' score of each individual freq. will be stored
+            // Prepare the data for the Complex numbers, because the raw audio is just a float array.
+            Complex[] complex_frame = new Complex[total_samples];
+            for (int i = 0; i < total_samples; i++)
+            {
+                // Start with Real part, the Imaginary part starts at 0, because the sine wave is at an offset.
+                complex_frame[i] = new Complex(frame[i], 0);
+            }
+
+            // Run the data through the FFT function
+            Complex[] fft_result = PerformFFT(complex_frame);
+
+            // Apply Nyquist limit rule again as like in DFT, to discard the second half because it is
+            // basically a mirror of the calculated frequencies.
+            int half_size = total_samples / 2;
             double[] freq_loud_score = new double[half_size];
 
-            // So in this outer loop we'd be going through every freq. pitch we're testing
+            // Convert the Complex coordinates into the needed loudness score for each freq. bin
             for (int i = 0; i < half_size; i++)
             {
-                // variables to hold the match scores of the wave
-                double cosine_score = 0;
-                double sine_score = 0;
-
-                // In the inner loop each *4096(of size)* sample will go through 1 by 1
-                for (int k = 0; k < total_samples; k++)
-                {
-                    // This is a perfectly clean wave for the exact frequency
-                    double angle = 2 * Math.PI * i * k / total_samples;
-
-                    // The audio is multiplied by the perfect wave and if it aligns the score gous up
-                    // otherwise it goes down to 0.
-                    cosine_score += frame[k] * Math.Cos(angle);
-                    sine_score += frame[k] * Math.Sin(angle);
-                }
-
-                // Combine the two scores with the Pythagorean theorem to calculate the final/total volume
-                // of this specific freq. in this audio chunk.
-                freq_loud_score[i] = Math.Sqrt((cosine_score * cosine_score) + (sine_score * sine_score));
+                // Use the Pythagorean theorem from the struct to find that score.
+                freq_loud_score[i] = fft_result[i].Magnitude();
             }
+
             return freq_loud_score;
         }
     }

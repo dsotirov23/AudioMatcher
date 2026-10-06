@@ -46,7 +46,7 @@ namespace AudioMatcher
                 // Loops through frames to apply DFT
                 for (int i = 0; i < frames.Count; i++)
                 {
-                    double[] frame_results = analyzer.ProcessFramesDFT(frames[i]);
+                    double[] frame_results = analyzer.ProcessFramesFFT(frames[i]);
                     full_spectrogram.Add(frame_results);
                 }
 
