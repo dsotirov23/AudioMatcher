@@ -54,6 +54,19 @@ namespace AudioMatcher
                     Peak p = peak_map[i];
                     Console.WriteLine($"Frame: {p.TimeFrameIndex:D3}; Bin {p.FrequencyBin,4}; Loudness: {p.Amplitude:F2}");
                 }
+
+                Console.WriteLine("\n Generating Fingerprints");
+
+                List<Fingerprint> fingerprints = analyzer.GenerateFingerprints(peak_map);
+
+                Console.WriteLine($"Total fingerprints generated: {fingerprints.Count}");
+
+                Console.WriteLine("\nSample of first 25 fingerprints");
+                for (int i = 0; i < Math.Min(25, fingerprints.Count); i++)
+                {
+                    Fingerprint f = fingerprints[i];
+                    Console.WriteLine($"Hash String: [{f.Hash}] | Anchor Time: Frame {f.AnchorTimeFrame}");
+                }
             }
             else
             {
