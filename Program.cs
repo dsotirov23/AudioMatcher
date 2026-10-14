@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using AudioMatcher.Hashing;
 using AudioMatcher.Media;
 using AudioMatcher.Transform;
 
@@ -57,7 +58,8 @@ namespace AudioMatcher
 
                 Console.WriteLine("\n Generating Fingerprints");
 
-                List<Fingerprint> fingerprints = analyzer.GenerateFingerprints(peak_map);
+                CombinatorialHasher hasher = new CombinatorialHasher();
+                List<Fingerprint> fingerprints = hasher.GenerateFingerprints(peak_map);
 
                 Console.WriteLine($"Total fingerprints generated: {fingerprints.Count}");
 
