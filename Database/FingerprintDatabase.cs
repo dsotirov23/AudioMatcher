@@ -39,5 +39,17 @@ namespace AudioMatcher.Database
         {
             return _database.Count;
         }
+
+        // Function to allow matching algorithm to fetch for a given hash key
+        public List<SongOccurence> GetOccurences(string hash)
+        {
+            if (_database.ContainsKey(hash))
+            {
+                return _database[hash];
+            }
+
+            // If database has never seen this, just return
+            return null;
+        }
     }
 }
