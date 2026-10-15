@@ -12,12 +12,12 @@ namespace AudioMatcher.Database
 
         // The exact frame where the anchor note of this hash is found. Will be used to
         // align time of matching song to sound
-        public int TimeFrame;
+        public int AbsoluteTimeFrame;
 
         public SongOccurence(string song_name, int time_frame)
         {
             SongName = song_name;
-            TimeFrame = time_frame;
+            AbsoluteTimeFrame = time_frame;
         }
     }
 }
