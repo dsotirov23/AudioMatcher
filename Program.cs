@@ -3,6 +3,8 @@ using System.Diagnostics;
 using AudioMatcher.Hashing;
 using AudioMatcher.Media;
 using AudioMatcher.Transform;
+using AudioMatcher.Database;
+using AudioMatcher.Matching;
 
 namespace AudioMatcher
 {
@@ -69,6 +71,38 @@ namespace AudioMatcher
                     Fingerprint f = fingerprints[i];
                     Console.WriteLine($"Hash String: [{f.Hash}] | Anchor Time: Frame {f.AnchorTimeFrame}");
                 }
+
+                Console.WriteLine("\n Building Temp Database");
+                FingerprintDatabase db = new FingerprintDatabase();
+
+                // Save track in memory 
+                db.AddTrack("871200__cat-fox_alex__slap-house-horn-stab", fingerprints);
+                Console.WriteLine($"Successfully loaded with {db.GetUniqueHashCount()} unique hashes.");
+
+                Console.WriteLine("\n Audio Query");
+                List<Peak> query_peaks = new List<Peak>();
+
+                // Test matching without using real input yet, so simulate a snippet starting from frame 10 to 50
+                int start_frame = 10;
+                int end_frame = 50;
+
+                foreach(Peak p in peak_map)
+                {
+                    if (p.TimeFrameIndex >= start_frame && p.TimeFrameIndex < end_frame)
+                    {
+                        // Since an audio recording will always start at 0, subtract the starting frame of the audio from the
+                        // original time index, so that the index of both starts at 0. They should match exactly 10 frames
+                        query_peaks.Add(new Peak(p.TimeFrameIndex - start_frame, p.FrequencyBin, p.Amplitude));
+                    }
+                }
+
+                // Run hasher on the fake recording used for testing
+                List<Fingerprint> query_fingerprints = hasher.GenerateFingerprints(query_peaks);
+                Console.WriteLine($"Generated {query_fingerprints.Count} fingerprints from the 'fake' audio for testing.");
+
+                // Pass that generated hash for the fake audio into the 'database' and use the matching algorithms
+                TrackMatcher matcher = new TrackMatcher();
+                matcher.FindBestMatch(query_fingerprints, db);
             }
             else
             {
