@@ -79,26 +79,39 @@ namespace AudioMatcher
                 db.AddTrack("871200__cat-fox_alex__slap-house-horn-stab", fingerprints);
                 Console.WriteLine($"Successfully loaded with {db.GetUniqueHashCount()} unique hashes.");
 
-                Console.WriteLine("\n Audio Query");
-                List<Peak> query_peaks = new List<Peak>();
+                Console.WriteLine("\n Simulating a Noisy Audio QUery");
 
-                // Test matching without using real input yet, so simulate a snippet starting from frame 10 to 50
-                int start_frame = 10;
-                int end_frame = 50;
+                // Slice audio sample by 3 seconds while starting at 5 seconds into original audio
+                int sample_rate = ext_data.SampleRate;
+                int query_start_sample = sample_rate * 5;
+                int query_length = sample_rate * 3;
 
-                foreach(Peak p in peak_map)
+                if (query_start_sample + query_length > ext_data.Samples.Length)
                 {
-                    if (p.TimeFrameIndex >= start_frame && p.TimeFrameIndex < end_frame)
-                    {
-                        // Since an audio recording will always start at 0, subtract the starting frame of the audio from the
-                        // original time index, so that the index of both starts at 0. They should match exactly 10 frames
-                        query_peaks.Add(new Peak(p.TimeFrameIndex - start_frame, p.FrequencyBin, p.Amplitude));
-                    }
+                    query_start_sample = 0;
+                    query_length = Math.Min(sample_rate * 3, ext_data.Samples.Length);
                 }
 
-                // Run hasher on the fake recording used for testing
+                float[] gd_query = new float[query_length];
+                Array.Copy(ext_data.Samples, query_start_sample, gd_query, 0, query_length);
+
+                // Degrade the good sample by injecting it with 15% random white noise (mathematical numbers in the data)
+                // This will kind of make a lot of audio peaks which are weak to disappear when doing the FFT, but the core
+                // peak map of the song, which'd be needed the most for matches should work.
+                float[] noisy_query = InjectNoise(gd_query, 0.15f);
+                Console.WriteLine("Injected 15% static noise which is artificial into query");
+
+                var query_frames = analyzer.CreateFrames(noisy_query);
+                List<double[]> query_spectrogram = new List<double[]>();
+
+                foreach (var frame in query_frames)
+                {
+                    query_spectrogram.Add(analyzer.ProcessFramesFFT(frame));
+                }
+
+                List<Peak> query_peaks = analyzer.GetFrequencyPeaks(query_spectrogram);
                 List<Fingerprint> query_fingerprints = hasher.GenerateFingerprints(query_peaks);
-                Console.WriteLine($"Generated {query_fingerprints.Count} fingerprints from the 'fake' audio for testing.");
+                Console.WriteLine($"Extracted {query_fingerprints.Count} fingerprints from the degraded clip.");
 
                 // Pass that generated hash for the fake audio into the 'database' and use the matching algorithms
                 TrackMatcher matcher = new TrackMatcher();
@@ -108,6 +121,38 @@ namespace AudioMatcher
             {
                 Console.WriteLine("\nError! Extraction Failed."); // Test done with file path and got correct message.
             }
+        }
+
+        // Method which changes the raw PCM amplitude values of audio array
+        static float[] InjectNoise(float[] original_samples, float noise_intensity)
+        {
+            Random rand = new Random();
+            float[] noisy_samples = new float[original_samples.Length];
+
+            for (int i = 0; i < original_samples.Length; i++)
+            {
+                // Generate a random amplitude shift between -1.0 and 1.0 (which can scale based on noise_intensity)
+                // This simulates chaotic, multi-freq. noise waves to test wheteher algorithm works if sound has 'white noise'
+                float static_noise = (float)((rand.NextDouble() * 2 - 1) * noise_intensity);
+
+                float combined_signal = original_samples[i] + static_noise;
+
+                // Digital audio samples are strictyl between -1.0 and 1.0 floating-points.If injected noise pushes
+                // amplitude outside the bounds, we cut it back, so that it stays inside the bounds which PCM has.
+                if (combined_signal > 1.0f)
+                {
+                    noisy_samples[i] = 1.0f;
+                }
+                else if (combined_signal < -1.0f)
+                {
+                    noisy_samples[i] = -1.0f;
+                }
+                else
+                {
+                    noisy_samples[i] = combined_signal;
+                }
+            }
+            return noisy_samples;
         }
     }
 }
