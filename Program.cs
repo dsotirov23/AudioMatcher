@@ -79,39 +79,30 @@ namespace AudioMatcher
                 db.AddTrack("871200__cat-fox_alex__slap-house-horn-stab", fingerprints);
                 Console.WriteLine($"Successfully loaded with {db.GetUniqueHashCount()} unique hashes.");
 
-                Console.WriteLine("\n Simulating a Noisy Audio QUery");
+                Console.WriteLine(" \n Live Microphone Recording Test");
 
-                // Slice audio sample by 3 seconds while starting at 5 seconds into original audio
-                int sample_rate = ext_data.SampleRate;
-                int query_start_sample = sample_rate * 5;
-                int query_length = sample_rate * 3;
+                // Initialize the layer for audio capture
+                MicrophoneRecorder mic = new MicrophoneRecorder();
 
-                if (query_start_sample + query_length > ext_data.Samples.Length)
-                {
-                    query_start_sample = 0;
-                    query_length = Math.Min(sample_rate * 3, ext_data.Samples.Length);
-                }
+                // Record 4 seconds of live audio. Use the correct sample rate for testing purpose (to 
+                // ecord at exact same freq. resolution)
+                float[] live_query = mic.Record(4, ext_data.SampleRate);
 
-                float[] gd_query = new float[query_length];
-                Array.Copy(ext_data.Samples, query_start_sample, gd_query, 0, query_length);
-
-                // Degrade the good sample by injecting it with 15% random white noise (mathematical numbers in the data)
-                // This will kind of make a lot of audio peaks which are weak to disappear when doing the FFT, but the core
-                // peak map of the song, which'd be needed the most for matches should work.
-                float[] noisy_query = InjectNoise(gd_query, 0.15f);
-                Console.WriteLine("Injected 15% static noise which is artificial into query");
-
-                var query_frames = analyzer.CreateFrames(noisy_query);
+                // Chunk raw live audio buffer into 4096 sample frames (needed for FFT)
+                var query_frames = analyzer.CreateFrames(live_query);
                 List<double[]> query_spectrogram = new List<double[]>();
 
+                // Process frames to generate spectrogram
                 foreach (var frame in query_frames)
                 {
                     query_spectrogram.Add(analyzer.ProcessFramesFFT(frame));
                 }
 
+                // Find the freq. peaks and save into list
                 List<Peak> query_peaks = analyzer.GetFrequencyPeaks(query_spectrogram);
+                // Generate and save hashes of frames to use for the matching
                 List<Fingerprint> query_fingerprints = hasher.GenerateFingerprints(query_peaks);
-                Console.WriteLine($"Extracted {query_fingerprints.Count} fingerprints from the degraded clip.");
+                Console.WriteLine($"Extracted {query_fingerprints.Count} fingerprints from the live recording.");
 
                 // Pass that generated hash for the fake audio into the 'database' and use the matching algorithms
                 TrackMatcher matcher = new TrackMatcher();
